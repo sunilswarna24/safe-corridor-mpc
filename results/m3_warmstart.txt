@@ -1,0 +1,4 @@
+closed-loop @ 20 Hz
+variant   iters_mean  p95_ms  med_ms  hits  rms
+cold      60.3       49.65   20.69   0   0.043
+warm      68.7       82.06   26.52   0   0.043

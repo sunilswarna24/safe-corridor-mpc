@@ -1,0 +1,4 @@
+myopic, no gate         hits= 115  map=  3  wait=   0  sealed=  0  rms=0.046  ok=0.839  ticks=753
+predicted, no gate      hits= 112  map=  3  wait=   0  sealed=  0  rms=0.026  ok=1.000  ticks=753
+myopic + gate           hits=   0  map=  3  wait=  80  sealed=  0  rms=0.043  ok=0.977  ticks=832
+predicted + gate        hits=   0  map=  3  wait=  79  sealed=  2  rms=0.043  ok=0.984  ticks=833

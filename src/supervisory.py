@@ -7,20 +7,22 @@ from typing import Sequence
 
 import numpy as np
 
-from .config import A_MAX, DT, R_ROBOT
+from .config import A_MAX, DT, R_ROBOT, W_MAX
 from .movers import CrossingDisk
 
 
 @dataclass
 class SupervisoryConfig:
-    slew_max: float = 3.0  # m/s^2 per tick
+    slew_max: float = 3.0  # m/s^2 (and rad/s^2-ish) per tick
     min_corridor_half: float = 0.06  # m
     # Enter wait when dist <= stop; leave when dist >= resume (hysteresis)
     stop_clear: float = 1.10  # m beyond geometric contact
     resume_clear: float = 1.80  # m beyond geometric contact
     a_max: float = A_MAX
+    w_max: float = W_MAX
     dt: float = DT
     robot_radius: float = R_ROBOT
+    plant: str = "di"  # "di" | "unicycle"
 
 
 @dataclass
@@ -41,6 +43,9 @@ class SupervisoryGate:
         self.state = SupervisoryState()
 
     def _forward_unit(self, z: np.ndarray, path_ahead: np.ndarray | None) -> np.ndarray:
+        if self.cfg.plant == "unicycle":
+            th = float(z[2])
+            return np.array([np.cos(th), np.sin(th)], dtype=float)
         v = np.asarray(z[2:4], dtype=float)
         if float(np.linalg.norm(v)) >= 0.08:
             return v / np.linalg.norm(v)
@@ -73,12 +78,10 @@ class SupervisoryGate:
                 any_close_ahead = True
 
         contact_resume = self.cfg.robot_radius + self.cfg.resume_clear
-        # resume if far from every mover (use max mover radius among set)
         r_max = max((m.radius for m in movers), default=0.0)
         resume_d = r_max + contact_resume
 
         if self.state.waiting:
-            # Clear when far from everyone, or nothing close ahead anymore
             if min_dist >= resume_d or not any_close_ahead:
                 self.state.waiting = False
                 return False
@@ -106,7 +109,8 @@ class SupervisoryGate:
         del dt
         boxes = np.asarray(corridors, dtype=float).reshape(-1, 4)
         sealed = False
-        for i in range(min(6, len(boxes))):
+        # ~1 s look-ahead on corridor half-width (20 stages @ 20 Hz)
+        for i in range(min(20, len(boxes))):
             xmin, xmax, ymin, ymax = boxes[i]
             if 0.5 * min(xmax - xmin, ymax - ymin) < self.cfg.min_corridor_half:
                 sealed = True
@@ -127,7 +131,11 @@ class SupervisoryGate:
         return True, "ok"
 
     def brake(self, z: np.ndarray) -> np.ndarray:
-        """Max-decel toward zero velocity (u=0 only coasts on a double integrator)."""
+        """Hard stop command for the active plant (u=0 only coasts)."""
+        if self.cfg.plant == "unicycle":
+            v = float(z[3])
+            a = float(np.clip(-v / self.cfg.dt, -self.cfg.a_max, self.cfg.a_max))
+            return np.array([a, 0.0], dtype=float)
         v = np.asarray(z[2:4], dtype=float)
         return np.clip(-v / self.cfg.dt, -self.cfg.a_max, self.cfg.a_max)
 

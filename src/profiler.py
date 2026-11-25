@@ -56,3 +56,25 @@ def profile_path(
     tangents[done] = tangents[np.argmax(~done)] if np.any(~done) else tangents[-1]
     vel = tangents * speed[:, None]
     return t, xy, vel
+
+
+def profile_unicycle(
+    waypoints_xy: np.ndarray,
+    dt: float,
+    v_cruise: float,
+    v_max: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Same polyline timing as profile_path, but state is [x,y,theta,v].
+    Heading from path tangent; unwrap; hold last heading when stopped.
+    Returns t (T,), ref_z (T,4).
+    """
+    t, xy, vel = profile_path(waypoints_xy, dt, v_cruise, v_max)
+    speed = np.linalg.norm(vel, axis=1)
+    theta = np.arctan2(vel[:, 1], vel[:, 0])
+    for i in range(len(theta)):
+        if speed[i] < 1e-6:
+            theta[i] = theta[i - 1] if i > 0 else 0.0
+    theta = np.unwrap(theta)
+    ref_z = np.column_stack([xy, theta, speed])
+    return t, ref_z

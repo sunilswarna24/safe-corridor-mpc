@@ -13,6 +13,7 @@ results/*
 !results/.gitkeep
 !results/*.png
 !results/*.gif
+!results/*.txt
 
 # Maps: track only what demos use
 maps/**

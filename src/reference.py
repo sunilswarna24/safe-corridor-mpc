@@ -48,6 +48,19 @@ def stack_state_ref(path_xy: np.ndarray, path_v: np.ndarray) -> np.ndarray:
     return np.column_stack([path_xy, path_v])
 
 
+def stack_unicycle_ref(path_xy: np.ndarray, path_v: np.ndarray) -> np.ndarray:
+    """(T,2)+(T,2) -> (T,4) [x,y,theta,v] with unwrapped heading."""
+    path_xy = np.asarray(path_xy, dtype=float).reshape(-1, 2)
+    path_v = np.asarray(path_v, dtype=float).reshape(-1, 2)
+    speed = np.linalg.norm(path_v, axis=1)
+    theta = np.arctan2(path_v[:, 1], path_v[:, 0])
+    for i in range(len(theta)):
+        if speed[i] < 1e-6:
+            theta[i] = theta[i - 1] if i > 0 else 0.0
+    theta = np.unwrap(theta)
+    return np.column_stack([path_xy, theta, speed])
+
+
 def horizon_from_traj(traj: np.ndarray, t0_index: int, N: int) -> np.ndarray:
     """N state samples starting at t0_index; pad with last row if needed."""
     T = traj.shape[0]

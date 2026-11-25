@@ -14,7 +14,10 @@ from .grid import OccupancyGrid
 
 def _crossing_frame(traj_xy: np.ndarray, mover_xy: np.ndarray) -> int:
     """Index where robot and mover are closest (better than raw midpoint)."""
-    d = np.linalg.norm(traj_xy - mover_xy, axis=1)
+    n = min(len(traj_xy), len(mover_xy))
+    if n <= 0:
+        return 0
+    d = np.linalg.norm(traj_xy[:n] - mover_xy[:n], axis=1)
     return int(np.argmin(d))
 
 
@@ -80,7 +83,7 @@ def plot_map_tracking(
     res = grid.resolution
     extent = [ox, ox + w * res, oy, oy + h * res]
 
-    # Crop view around the trajectory for a readable portfolio figure
+    # Crop view around the trajectory
     pts = np.vstack([path_xy, traj_xy, waypoints])
     margin = 2.0
     xmin, ymin = pts.min(axis=0) - margin

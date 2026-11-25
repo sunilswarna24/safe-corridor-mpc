@@ -116,8 +116,88 @@ def paint_movers(
     t: float,
     extra_radius: float = 0.0,
 ) -> OccupancyGrid:
-    """Paint mover disks at time t (current poses only — no foresight)."""
+    """Paint mover disks at time t (current poses)."""
     g = grid
     for m in movers:
         g = paint_disk_obstacle(g, tuple(m.position(t)), float(m.radius) + extra_radius)
     return g
+
+
+def _local_aabb_disks(
+    grid: OccupancyGrid,
+    x: float,
+    y: float,
+    disks: list[tuple[float, float, float]],
+    max_half: float = 1.2,
+    clearance: float = 0.0,
+) -> tuple[float, float, float, float]:
+    """AABB growth that also stops on predicted mover disks (cx,cy,r)."""
+    step = 0.5 * grid.resolution
+    if step <= 0:
+        step = 0.05
+
+    def hit(px: float, py: float) -> bool:
+        if _blocked(grid, px, py):
+            return True
+        for cx, cy, r in disks:
+            if (px - cx) ** 2 + (py - cy) ** 2 <= r * r:
+                return True
+        return False
+
+    def expand(dx: float, dy: float) -> float:
+        dist = 0.0
+        while dist + step <= max_half:
+            nx = x + (dist + step) * dx
+            ny = y + (dist + step) * dy
+            if hit(nx, ny):
+                break
+            dist += step
+        return max(0.0, dist - clearance)
+
+    left = expand(-1.0, 0.0)
+    right = expand(1.0, 0.0)
+    down = expand(0.0, -1.0)
+    up = expand(0.0, 1.0)
+    eps = 0.5 * grid.resolution
+    return (x - max(left, eps), x + max(right, eps), y - max(down, eps), y + max(up, eps))
+
+
+def corridors_predicted(
+    grid: OccupancyGrid,
+    movers: list,
+    t: float,
+    dt: float,
+    path_xy: np.ndarray,
+    max_half: float = 1.2,
+    extra_radius: float = 0.0,
+    clearance: float = 0.0,
+) -> np.ndarray:
+    """
+    Stage-wise AABBs: mover disks at t+(j+1)*dt for each horizon stage.
+    path_xy: (N, 2) -> bounds (N, 4).
+    """
+    path_xy = np.asarray(path_xy, dtype=float).reshape(-1, 2)
+    n = path_xy.shape[0]
+    out = np.empty((n, 4), dtype=float)
+    eps = max(0.5 * grid.resolution, 0.02)
+    for j in range(n):
+        tj = t + (j + 1) * dt
+        disks = [
+            (float(m.position(tj)[0]), float(m.position(tj)[1]), float(m.radius) + extra_radius)
+            for m in movers
+        ]
+        sx, sy = float(path_xy[j, 0]), float(path_xy[j, 1])
+        # Seal stages where the ref sits in/near a predicted disk.
+        sealed = False
+        for cx, cy, r in disks:
+            if (sx - cx) ** 2 + (sy - cy) ** 2 <= (r + 0.20) ** 2:
+                out[j] = (sx - eps, sx + eps, sy - eps, sy + eps)
+                sealed = True
+                break
+        if sealed:
+            continue
+        sx, sy = _snap_free(grid, sx, sy)
+        out[j] = _local_aabb_disks(
+            grid, sx, sy, disks, max_half=max_half, clearance=clearance
+        )
+    return out

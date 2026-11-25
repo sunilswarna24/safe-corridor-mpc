@@ -8,13 +8,16 @@ R_ROBOT = 0.30  # m
 R_INFL = 0.35  # m — corridor margin (M2+)
 PLAN_INFL = 0.20  # m — planner dilation (aisles stay open)
 
-V_MAX = 1.0  # m/s per axis
-A_MAX = 1.5  # m/s^2 per axis
+V_MAX = 1.0  # m/s (unicycle forward speed; DI per-axis)
+A_MAX = 1.5  # m/s^2 longitudinal accel
+W_MAX = 1.2  # rad/s yaw rate (unicycle)
 V_CRUISE = 0.6  # m/s along Theta* paths
 
-# Tracking weights: position, velocity, input effort
+# Tracking weights
 Q_POS = 20.0
 Q_VEL = 5.0
+Q_THETA = 8.0  # unicycle heading
+Q_SPEED = 4.0  # unicycle longitudinal speed
 R_U = 0.1
 
 # Plant disturbance (Gaussian). 0 = ideal.
