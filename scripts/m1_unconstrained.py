@@ -19,16 +19,17 @@ def main() -> None:
         stats["path_xy"],
         stats["traj_xy"],
         out / "m1_tracking.png",
-        title="M1 double-integrator tracking MPC (figure-eight)",
+        title="M1 tracking MPC — position + velocity (figure-eight)",
     )
     plot_errors(stats["t"], stats["err"], stats["solve_ms"], out / "m1_errors.png")
 
-    print("M1 unconstrained tracking")
-    print(f"  rms error [m]:     {stats['err_rms']:.4f}")
-    print(f"  max error [m]:     {stats['err_max']:.4f}")
-    print(f"  solve med [ms]:    {stats['solve_ms_med']:.3f}")
-    print(f"  solve p95 [ms]:    {stats['solve_ms_p95']:.3f}")
-    print(f"  OSQP ok fraction:  {stats['ok_frac']:.3f}")
+    print("M1 unconstrained tracking (pos + vel)")
+    print(f"  rms pos error [m]:   {stats['err_rms']:.4f}")
+    print(f"  max pos error [m]:   {stats['err_max']:.4f}")
+    print(f"  rms vel error [m/s]: {stats['err_vel_rms']:.4f}")
+    print(f"  solve med [ms]:      {stats['solve_ms_med']:.3f}")
+    print(f"  solve p95 [ms]:      {stats['solve_ms_p95']:.3f}")
+    print(f"  OSQP ok fraction:    {stats['ok_frac']:.3f}")
     print(f"  wrote {out / 'm1_tracking.png'}")
     print(f"  wrote {out / 'm1_errors.png'}")
 

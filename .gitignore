@@ -4,10 +4,22 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
+*.onnx
+.DS_Store
+Thumbs.db
+
+# Keep demo artifacts; ignore anything else under results/
 results/*
 !results/.gitkeep
 !results/*.png
 !results/*.gif
-*.onnx
-.DS_Store
-Thumbs.db
+
+# Maps: track only what demos use
+maps/**
+!maps/ATTRIBUTION.md
+!maps/warehouse.pgm
+!maps/warehouse.yaml
+!maps/depot.pgm
+!maps/depot.yaml
+!maps/aws_warehouse/
+!maps/aws_warehouse/**

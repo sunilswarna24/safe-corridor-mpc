@@ -1,1 +1,1 @@
-"""Safe-corridor constrained MPC — Phase 1 Python sandbox."""
+"""Safe-corridor constrained MPC (Python sim)."""

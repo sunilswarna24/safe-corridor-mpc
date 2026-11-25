@@ -5,12 +5,20 @@ from __future__ import annotations
 import numpy as np
 
 
-def figure_eight(t: np.ndarray, scale: float = 2.0, omega: float = 0.35) -> np.ndarray:
-    """Lemniscate of Gerono in the plane. Shape (T, 2) positions."""
+def figure_eight(
+    t: np.ndarray, scale: float = 2.0, omega: float = 0.35
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Lemniscate of Gerono + analytic velocity.
+    Returns path_xy (T,2), path_v (T,2).
+    """
     t = np.asarray(t, dtype=float)
-    x = scale * np.sin(omega * t)
-    y = scale * np.sin(omega * t) * np.cos(omega * t)
-    return np.column_stack([x, y])
+    wt = omega * t
+    x = scale * np.sin(wt)
+    y = scale * np.sin(wt) * np.cos(wt)
+    vx = scale * omega * np.cos(wt)
+    vy = scale * omega * np.cos(2.0 * wt)
+    return np.column_stack([x, y]), np.column_stack([vx, vy])
 
 
 def line_segment(
@@ -18,20 +26,32 @@ def line_segment(
     p0: tuple[float, float] = (0.0, 0.0),
     p1: tuple[float, float] = (4.0, 0.0),
     duration: float = 8.0,
-) -> np.ndarray:
-    """Constant-speed line from p0 to p1 over `duration` seconds, then hold."""
+) -> tuple[np.ndarray, np.ndarray]:
+    """Constant-speed line from p0 to p1; velocity zero after arrival."""
     t = np.asarray(t, dtype=float)
-    alpha = np.clip(t / duration, 0.0, 1.0)
     p0 = np.asarray(p0, dtype=float)
     p1 = np.asarray(p1, dtype=float)
-    return (1.0 - alpha)[:, None] * p0 + alpha[:, None] * p1
+    delta = p1 - p0
+    dist = float(np.linalg.norm(delta))
+    speed = dist / duration if duration > 0 else 0.0
+    direction = delta / dist if dist > 1e-9 else np.zeros(2)
+
+    alpha = np.clip(t / duration, 0.0, 1.0)
+    path_xy = (1.0 - alpha)[:, None] * p0 + alpha[:, None] * p1
+    moving = (t < duration).astype(float)[:, None]
+    path_v = moving * (speed * direction)
+    return path_xy, path_v
 
 
-def horizon_from_path(path_xy: np.ndarray, t0_index: int, N: int) -> np.ndarray:
-    """Take N position samples starting at t0_index; pad with last point if needed."""
-    T = path_xy.shape[0]
-    out = np.empty((N, 2), dtype=float)
+def stack_state_ref(path_xy: np.ndarray, path_v: np.ndarray) -> np.ndarray:
+    """(T,2)+(T,2) -> (T,4) [x,y,vx,vy]."""
+    return np.column_stack([path_xy, path_v])
+
+
+def horizon_from_traj(traj: np.ndarray, t0_index: int, N: int) -> np.ndarray:
+    """N state samples starting at t0_index; pad with last row if needed."""
+    T = traj.shape[0]
+    out = np.empty((N, traj.shape[1]), dtype=float)
     for k in range(N):
-        i = min(t0_index + k, T - 1)
-        out[k] = path_xy[i]
+        out[k] = traj[min(t0_index + k, T - 1)]
     return out
